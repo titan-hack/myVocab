@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vocabularies  Vocabulary[]
+  quizSessions  QuizSession[]
+  progress      UserProgress[]
+}
+
+model Vocabulary {
+  id          String   @id @default(cuid())
+  word        String
+  definition  String
+  example     String?
+  category    String?
+  difficulty  Int      @default(1) // 1-5 scale
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress UserProgress[]
+  quizzes  QuizResult[]
+}
+
+model QuizSession {
+  id          String   @id @default(cuid())
+  userId      String
+  score       Int
+  totalQuestions Int
+  timeSpent   Int      // in seconds
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results QuizResult[]
+}
+
+model QuizResult {
+  id           String   @id @default(cuid())
+  sessionId    String
+  vocabularyId String
+  correct      Boolean
+  timeTaken    Int      // in seconds
+  createdAt    DateTime @default(now())
+
+  session   QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary  @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+}
+
+model UserProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  vocabularyId String
+  level        Int      @default(1) // spaced repetition level
+  nextReview   DateTime @default(now())
+  correctCount Int      @default(0)
+  totalCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyId])
+}
